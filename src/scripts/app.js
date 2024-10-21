@@ -43,7 +43,7 @@ define(["TFS/WorkItemTracking/Services", "TFS/WorkItemTracking/RestClient", "TFS
             if (taskTemplate.fields.hasOwnProperty(key) == false) {
                 return false;
             }
-            if (key.indexOf('System.Tags') >= 0) { //not supporting tags for now
+            if (key.indexOf('System.Tags-Remove') >= 0) { //removing tags not applicable
                 return false;
             }
             if (taskTemplate.fields[key].toLowerCase() == '@me') { //current identity is handled later
@@ -70,14 +70,21 @@ define(["TFS/WorkItemTracking/Services", "TFS/WorkItemTracking/RestClient", "TFS
         }
 
         function createWorkItemFromTemplate(currentWorkItem, taskTemplate, teamSettings) {
+            const workItemKeys = {
+                "System.Tags-Add": "System.Tags",
+            };
+
             var workItem = [];
 
             for (var key in taskTemplate.fields) {
+                //map template field to work item field
+                mappedKey = workItemKeys[key] || key;
+
                 if (IsPropertyValid(taskTemplate, key)) {
                     //if field value is empty copies value from parent
                     if (taskTemplate.fields[key] == '') {
-                        if (currentWorkItem[key] != null) {
-                            workItem.push({ "op": "add", "path": "/fields/" + key, "value": currentWorkItem[key] })
+                        if (currentWorkItem[mappedKey] != null) {
+                            workItem.push({ "op": "add", "path": "/fields/" + mappedKey, "value": currentWorkItem[key] })
                         }
                     }
                     else {
@@ -85,7 +92,7 @@ define(["TFS/WorkItemTracking/Services", "TFS/WorkItemTracking/RestClient", "TFS
                         //check for references to parent fields - {fieldName}
                         fieldValue = replaceReferenceToParentField(fieldValue, currentWorkItem);
 
-                        workItem.push({ "op": "add", "path": "/fields/" + key, "value": fieldValue })
+                        workItem.push({ "op": "add", "path": "/fields/" + mappedKey, "value": fieldValue })
                     }
                 }
             }
